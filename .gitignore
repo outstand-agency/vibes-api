@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+*.mp4
+*.png
+*.jpg
+.pytest_cache/
+.coverage
+node_modules/
+.DS_Store

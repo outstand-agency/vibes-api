@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: vibes-api
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: R2_BUCKET
+        value: remotion-assets
+      - key: R2_PUBLIC_URL
+        value: https://pub-09f5881ec7024e0faaff06eba5fb1e05.r2.dev
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
