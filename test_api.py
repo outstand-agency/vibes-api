@@ -168,7 +168,6 @@ class UploadsTests(unittest.TestCase):
             "mediaEntId": "111",
             "cdnUrl": "https://cdn/111",
         }
-        client.find_asset.return_value = {"id": "asset-1"}
         make_client.return_value = client
         with _client() as test_client:
             response = test_client.post(
@@ -179,7 +178,10 @@ class UploadsTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.text)
         body = response.json()
         self.assertEqual(body["media_id"], "111")
-        self.assertEqual(body["asset_id"], "asset-1")
+        self.assertEqual(body["cdn_url"], "https://cdn/111")
+        self.assertIsNone(body["asset_id"])
+        # find_asset is no longer called by /uploads
+        client.find_asset.assert_not_called()
 
 
 class FramesTests(unittest.TestCase):

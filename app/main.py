@@ -271,11 +271,15 @@ async def upload_media(
     finally:
         os.unlink(tmp_path)
 
-    asset = client.find_asset(project_id, upload["mediaEntId"])
+    # vibes.ai creates the project-side content item at generation time using
+    # the uploadToken, not via a separate linking call. /uploads therefore
+    # returns the upload metadata only; the contentItemId becomes available
+    # later via /api/project-assets if the user runs a generation in the
+    # browser, but our /frames / /generate flow does not need it.
     return UploadResponse(
         media_id=upload["mediaEntId"],
         cdn_url=upload["cdnUrl"],
-        asset_id=asset["id"] if asset else None,
+        asset_id=None,
     )
 
 

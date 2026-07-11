@@ -225,9 +225,17 @@ class Vibes:
         }
         return batch_id, self.request("POST", "/api/generate/videos", body)
 
-    def find_asset(self, project_id, media_ent_id, retries=20, delay=1.0):
+    def find_asset(self, project_id, media_ent_id, retries=3, delay=0.5):
+        # NOTE: vibes.ai does not link freshly-uploaded files to a project
+        # via this endpoint. The server creates the project-side content
+        # item at generation time using the uploadToken. This method is
+        # kept for callers that pre-link assets (e.g. by uploading via the
+        # browser first). It will return None for fresh API uploads.
         for _ in range(retries):
-            listing = self.project_assets(project_id)
+            try:
+                listing = self.project_assets(project_id)
+            except RuntimeError:
+                return None
             for item in listing.get("items") or []:
                 if item.get("mediaEntId") == media_ent_id:
                     return item
