@@ -42,7 +42,7 @@ class Vibes:
             raise RuntimeError(f"{method} {path}: HTTP {error.code}: {detail}") from error
         return json.loads(raw) if raw else None
 
-    def upload_media(self, path, timeout=120):
+    def upload_media(self, path, project_id=None, timeout=120):
         boundary = f"----WebKitFormBoundary{uuid.uuid4().hex[:16]}"
         filename = os.path.basename(path)
         mime_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
@@ -55,6 +55,14 @@ class Vibes:
         ).encode()
         tail = f"\r\n--{boundary}--\r\n".encode()
         body = head + payload + tail
+        # vibes.ai associates the upload with a project via the referer header.
+        # Without the project page URL, the upload appears in the user's library
+        # but never shows up under /api/project-assets?project_id=...
+        referer = (
+            f"{self.base_url}/projects/{project_id}"
+            if project_id
+            else f"{self.base_url}/"
+        )
         request = Request(
             f"{self.base_url}/api/upload-media",
             data=body,
@@ -63,6 +71,7 @@ class Vibes:
                 "Cookie": self.headers["Cookie"],
                 "Origin": self.base_url,
                 "User-Agent": self.headers["User-Agent"],
+                "Referer": referer,
                 "Content-Type": f"multipart/form-data; boundary={boundary}",
             },
             method="POST",
@@ -208,7 +217,7 @@ class Vibes:
         }
         return batch_id, self.request("POST", "/api/generate/videos", body)
 
-    def find_asset(self, project_id, media_ent_id, retries=5, delay=1.0):
+    def find_asset(self, project_id, media_ent_id, retries=20, delay=1.0):
         for _ in range(retries):
             listing = self.project_assets(project_id)
             for item in listing.get("items") or []:
@@ -295,8 +304,8 @@ def main():
         if not project_id:
             project_id = api.create_project("Untitled")["project"]["id"]
         if args.command == "frames":
-            start_upload = api.upload_media(args.start)
-            end_upload = api.upload_media(args.end)
+            start_upload = api.upload_media(args.start, project_id=project_id)
+            end_upload = api.upload_media(args.end, project_id=project_id)
             start_asset = api.find_asset(project_id, start_upload["mediaEntId"])
             end_asset = api.find_asset(project_id, end_upload["mediaEntId"])
             if start_asset is None or end_asset is None:

@@ -178,8 +178,8 @@ async def _finish_generation(
 async def _resolve_frames(
     client, project_id: str, start_path: str, end_path: str
 ) -> tuple[dict, dict]:
-    start_upload = client.upload_media(start_path)
-    end_upload = client.upload_media(end_path)
+    start_upload = client.upload_media(start_path, project_id=project_id)
+    end_upload = client.upload_media(end_path, project_id=project_id)
     start_asset = client.find_asset(project_id, start_upload["mediaEntId"])
     end_asset = client.find_asset(project_id, end_upload["mediaEntId"])
     if start_asset is None or end_asset is None:
@@ -266,7 +266,7 @@ async def upload_media(
         handle.write(payload)
         tmp_path = handle.name
     try:
-        upload = client.upload_media(tmp_path)
+        upload = client.upload_media(tmp_path, project_id=project_id)
     finally:
         os.unlink(tmp_path)
 

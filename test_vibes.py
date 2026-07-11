@@ -89,6 +89,22 @@ class VibesTest(unittest.TestCase):
         self.assertIn(b'filename="', request.data)
         self.assertEqual(result["mediaEntId"], "999")
 
+    @patch("vibes.urlopen")
+    def test_upload_media_sets_project_referer(self, open_url):
+        open_url.return_value = Response(b'{"mediaEntId":"999"}')
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as handle:
+            handle.write(b"\x89PNG\r\n\x1a\nfake")
+            path = handle.name
+        try:
+            Vibes("secret").upload_media(path, project_id="proj-1")
+        finally:
+            os.unlink(path)
+        request = open_url.call_args.args[0]
+        self.assertEqual(
+            request.headers.get("Referer"), "https://vibes.ai/projects/proj-1"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
