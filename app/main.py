@@ -178,18 +178,19 @@ async def _finish_generation(
 async def _resolve_frames(
     client, project_id: str, start_path: str, end_path: str
 ) -> tuple[dict, dict]:
+    # NOTE: vibes.ai's upload-to-project linkage uses a hidden endpoint that
+    # we have not been able to reproduce from the public API alone. The
+    # browser flow performs an additional call (likely triggered by drag-drop
+    # UI state) that links the upload to the project; that endpoint is not
+    # observable in /api/project-assets polling. As a workaround, we accept
+    # the upload's mediaEntId + uploadToken and pass them straight to the
+    # generation request, where the server creates the content item at
+    # generation time. This requires the server-side dragDrop flag path.
     start_upload = client.upload_media(start_path, project_id=project_id)
     end_upload = client.upload_media(end_path, project_id=project_id)
-    start_asset = client.find_asset(project_id, start_upload["mediaEntId"])
-    end_asset = client.find_asset(project_id, end_upload["mediaEntId"])
-    if start_asset is None or end_asset is None:
-        raise HTTPException(
-            status_code=502,
-            detail="Uploaded frames did not appear in /api/project-assets.",
-        )
     return (
-        {**start_upload, "asset_id": start_asset["id"]},
-        {**end_upload, "asset_id": end_asset["id"]},
+        {**start_upload, "asset_id": None},
+        {**end_upload, "asset_id": None},
     )
 
 

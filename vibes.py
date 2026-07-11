@@ -155,6 +155,15 @@ class Vibes:
     def create_frame_batch(self, project_id, prompt, start, end, count=4, resolution="720p"):
         batch_id = f"batch-{uuid.uuid4()}"
         timestamp = now()
+        # Fresh uploads have no project-side contentItemId yet; the server
+        # creates the content items at generation time when imageUploadToken
+        # is supplied. This mirrors the dragDrop upload path in the browser.
+        source_start = {"id": None, "source": "start_frame", "dragDrop": True}
+        if start.get("asset_id"):
+            source_start = {"id": start["asset_id"], "source": "start_frame"}
+        source_end = {"id": None, "source": "end_frame", "dragDrop": True}
+        if end.get("asset_id"):
+            source_end = {"id": end["asset_id"], "source": "end_frame"}
         config = {
             "directGeneration": True,
             "promptModel": "gemini-2.5-flash",
@@ -163,13 +172,11 @@ class Vibes:
             "videoModel": "midjen-short",
             "resolution": resolution,
             "batchVariation": True,
-            "sourceContentItemIds": [
-                {"id": start["asset_id"], "source": "start_frame"},
-                {"id": end["asset_id"], "source": "end_frame"},
-            ],
+            "sourceContentItemIds": [source_start, source_end],
             "directPromptImageHandle": {
                 "image_url": start["cdnUrl"],
                 "image_ent_id": start["mediaEntId"],
+                "imageUploadToken": start.get("uploadToken"),
                 "source": "asset",
             },
             "lastFrameImageUrl": end["cdnUrl"],
@@ -204,6 +211,7 @@ class Vibes:
             "type": "image",
             "imageUrl": start["cdnUrl"],
             "imageEntId": start["mediaEntId"],
+            "imageUploadToken": start.get("uploadToken"),
             "prompt": prompt,
             "originalPrompt": prompt,
             "config": config,

@@ -55,8 +55,18 @@ class VibesTest(unittest.TestCase):
             Response(b'{"batch":null}'),
             Response(b'{"success":true,"needsPolling":true}'),
         ]
-        start = {"cdnUrl": "https://cdn/start", "mediaEntId": "111", "asset_id": "A1"}
-        end = {"cdnUrl": "https://cdn/end", "mediaEntId": "222", "asset_id": "A2"}
+        start = {
+            "cdnUrl": "https://cdn/start",
+            "mediaEntId": "111",
+            "asset_id": "A1",
+            "uploadToken": "tok-start",
+        }
+        end = {
+            "cdnUrl": "https://cdn/end",
+            "mediaEntId": "222",
+            "asset_id": "A2",
+            "uploadToken": "tok-end",
+        }
         batch_id, _ = Vibes("secret").generate_frames(
             "project-1", "smooth animate", start, end, 2, "720p"
         )
@@ -68,9 +78,26 @@ class VibesTest(unittest.TestCase):
             {"id": "A2", "source": "end_frame"},
         ])
         self.assertEqual(body["config"]["directPromptImageHandle"]["image_ent_id"], "111")
+        self.assertEqual(body["inputs"][0]["imageUploadToken"], "tok-start")
         self.assertEqual(body["config"]["lastFrameImageEntId"], "222")
         self.assertEqual(body["inputs"][0]["type"], "image")
         self.assertEqual(body["inputs"][0]["imageUrl"], "https://cdn/start")
+
+    @patch("vibes.urlopen")
+    def test_frames_uses_dragdrop_when_no_asset_id(self, open_url):
+        open_url.side_effect = [
+            Response(b'{"batch":null}'),
+            Response(b'{"success":true}'),
+        ]
+        start = {"cdnUrl": "https://cdn/start", "mediaEntId": "111", "uploadToken": "ts"}
+        end = {"cdnUrl": "https://cdn/end", "mediaEntId": "222", "uploadToken": "te"}
+        Vibes("secret").generate_frames("project-1", "smooth", start, end, 1, "720p")
+        _, second = (call.args[0] for call in open_url.call_args_list)
+        body = json.loads(second.data)
+        sources = body["config"]["sourceContentItemIds"]
+        self.assertEqual(sources[0], {"id": None, "source": "start_frame", "dragDrop": True})
+        self.assertEqual(sources[1], {"id": None, "source": "end_frame", "dragDrop": True})
+        self.assertEqual(body["config"]["directPromptImageHandle"]["imageUploadToken"], "ts")
 
     @patch("vibes.urlopen")
     def test_upload_media_multipart(self, open_url):
